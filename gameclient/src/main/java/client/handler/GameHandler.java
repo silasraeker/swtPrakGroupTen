@@ -12,6 +12,8 @@ import client.game.Move;
 import client.game.Player;
 import client.util.NetworkUtil;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ExecutionException;
 
 
@@ -77,16 +79,21 @@ public class GameHandler extends Handler {
     }
 
 
-    private void handlePOSTEcho(HttpExchange req)
+    private void handlePOSTEcho(HttpExchange req) 
         throws IOException, InterruptedException, ExecutionException {
-
+        
         try {
-            String rec = NetworkUtil.deserializeBody(req, String.class);
+            // Liest den Body direkt als UTF_8 String, ohne Jackson anzufassen
+            String rec;
+            try (InputStream is = req.getRequestBody()) {
+                rec = new String(is.readAllBytes(), StandardCharsets.UTF_8);
+            }
+        
             NetworkUtil.respond(req, 200, rec);
             logger.debug("Received data: data = {}", rec);
         }
         catch (Exception e) {
-            logger.warn("Exception: {}:{}:{}", e, e.getMessage(), e.getStackTrace());
+            logger.warn("Exception: {}:{}", e.getClass().getSimpleName(), e.getMessage(), e);
         }
     }
 
