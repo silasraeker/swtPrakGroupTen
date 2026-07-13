@@ -267,7 +267,7 @@ public final class NetworkUtil {
             return res;
         }
         catch (StreamReadException sre) {
-            logger.warn("sre, resClass= {}, sre= {}", resClass.getName(), sre.getStackTrace());
+            logger.warn("sre, resClass= {}, sre= {} stream = {}", resClass.getName(), sre.getStackTrace(), stream);
             // received broken json
             throw new InvalidDataException(
                 resClass,
