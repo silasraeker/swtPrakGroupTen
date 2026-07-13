@@ -6,6 +6,7 @@ import ai.engine.KIClient;
 import ai.engine.KIClient.Difficulty;
 import client.dto.ServerGameMove;
 import client.dto.ServerGameState;
+import client.exception.InvalidDataException;
 import client.game.Content;
 import client.game.Move;
 import client.game.Player;
@@ -47,6 +48,10 @@ public class GameHandler extends Handler {
 
             switch (route) {
 
+                // (POST, [echo])
+                case Route r when route.method.equals("POST")   && route.path.length == 1   && "echo".equals(route.path[0])
+                    -> handlePOSTEcho(req);
+
                 // (POST, [staticai])
                 case Route r when route.method.equals("POST")   && route.path.length == 1   && "staticai".equals(route.path[0])
                     -> handlePOSTGameState(req);
@@ -68,6 +73,20 @@ public class GameHandler extends Handler {
         }
         finally {
             req.close();
+        }
+    }
+
+
+    private void handlePOSTEcho(HttpExchange req)
+        throws IOException, InterruptedException, ExecutionException {
+
+        try {
+            String rec = NetworkUtil.deserializeBody(req, String.class);
+            NetworkUtil.respond(req, 200, rec);
+            logger.debug("Received data: data = {}", rec);
+        }
+        catch (Exception e) {
+            logger.warn("Exception: {}:{}:{}", e, e.getMessage(), e.getStackTrace());
         }
     }
 
@@ -119,7 +138,11 @@ public class GameHandler extends Handler {
             NetworkUtil.respond(req, 200, playerMoveJson);
             ai.stopCalculating();
         }
-        catch(Exception e) { logger.warn("Exception: {}:{}:{}", e, e.getMessage(), e.getStackTrace()); }
+        catch (InvalidDataException ide) {
+            logger.info("Invalid data!");
+            NetworkUtil.respond(req, 400, "Invalid data!");
+        }
+        catch (Exception e) { logger.warn("Exception: {}:{}:{}", e, e.getMessage(), e.getStackTrace()); }
     }
 
     /**
