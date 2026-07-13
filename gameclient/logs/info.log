@@ -1,0 +1,10 @@
+
+java -jar "workspace\swtpra-ss26-student_release\gameserver\target\gameserver-1.0-SNAPSHOT.jar"
+Get-Content -Path "C:\Users\Max\Documents\Fächer\4. Sommersemester 26\Softwaretechnikpraktikum\gruppe10\workspace\dev_env\gameclient\logs\client.log" -Wait -Tail 20
+cd "workspace\dev_env\gameclient"
+mvn compile exec:java -Dexec.mainClass="client.Client"
+
+start
+POST client+/game/start game_start_example
+GET client+/game/move/{id}/0
+POST client+/game/move/{id}/0 game_move_WHITE_1_example

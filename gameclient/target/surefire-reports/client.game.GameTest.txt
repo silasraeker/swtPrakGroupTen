@@ -1,0 +1,28 @@
+-------------------------------------------------------------------------------
+Test set: client.game.GameTest
+-------------------------------------------------------------------------------
+Tests run: 17, Failures: 2, Errors: 0, Skipped: 0, Time elapsed: 2.726 s <<< FAILURE! -- in client.game.GameTest
+client.game.GameTest.testGetAllPossibleMovesAsMap -- Time elapsed: 0.033 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: Die Liste der Züge für diese Position darf nicht leer sein. ==> expected: <false> but was: <true>
+	at org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+	at org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+	at org.junit.jupiter.api.AssertFalse.failNotFalse(AssertFalse.java:63)
+	at org.junit.jupiter.api.AssertFalse.assertFalse(AssertFalse.java:36)
+	at org.junit.jupiter.api.Assertions.assertFalse(Assertions.java:239)
+	at client.game.GameTest.testGetAllPossibleMovesAsMap(GameTest.java:264)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+client.game.GameTest.testGetAllPossibleMoves -- Time elapsed: 0.007 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: Die Gesamtliste aller möglichen Züge darf nicht leer sein. ==> expected: <false> but was: <true>
+	at org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+	at org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+	at org.junit.jupiter.api.AssertFalse.failNotFalse(AssertFalse.java:63)
+	at org.junit.jupiter.api.AssertFalse.assertFalse(AssertFalse.java:36)
+	at org.junit.jupiter.api.Assertions.assertFalse(Assertions.java:239)
+	at client.game.GameTest.testGetAllPossibleMoves(GameTest.java:236)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+

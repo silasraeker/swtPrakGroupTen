@@ -1,0 +1,9 @@
+client\game\MoveTest.class
+client\game\PositionTest.class
+client\util\NetworkUtilTest.class
+client\game\PlayerTest.class
+client\service\GameServiceTest.class
+client\util\URIValidatorTest.class
+client\service\InformationServiceTest.class
+client\game\GameTest.class
+client\service\GameMapperTest.class

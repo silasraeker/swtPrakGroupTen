@@ -1,0 +1,39 @@
+{
+  "gameId": 123,
+  "player": 1,
+  "board": [
+    [-1,1,-1,1,-1],
+    [1,-1,-1,-1,1],
+    [-1,-1,-1,-1,-1],
+    [0,-1,-1,-1,0],
+    [-1,0,-1,0,-1]
+  ]
+}
+
+{
+ "start_move": {"x": 3, "y": 4},
+ "target_move": {"x": 4, "y": 2},
+ "arrow_target": {"x": 3, "y": 1}
+}
+
+{
+    "player0":{
+     "ai_id":0,
+     "name":"ai0",
+     "difficulty":"EASY"
+    },
+    "player1":{
+     "player_id":1,
+     "name":"ai1",
+     "url":"http://localhost:6070/game/state/123"
+    },
+   "max_turn_time":40,
+   "board_size":5,
+   "turn_delay":1
+}
+
+{
+    "ai_id":0,
+    "name":"ai0",
+    "difficulty":"EASY"
+}

@@ -1,0 +1,5 @@
+{
+ "start_move": {"x": 3, "y": 4},
+ "target_move": {"x": 4, "y": 2},
+ "arrow_target": {"x": 3, "y": 1}
+}

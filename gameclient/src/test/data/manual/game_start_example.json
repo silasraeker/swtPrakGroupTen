@@ -1,0 +1,17 @@
+{
+   "players": [
+    {
+     "ai_id":0,
+     "name":"ai0",
+     "difficulty":"EASY"
+    },
+    {
+     "ai_id":1,
+     "name":"ai1",
+     "difficulty":"MEDIUM"
+    }
+   ],
+   "max_turn_time":40,
+   "board_size":5,
+   "turn_delay":1
+}

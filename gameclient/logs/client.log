@@ -1,0 +1,24 @@
+2026-07-13 14:49:23 Client          TRACE Creating Gameclient HttpServer.
+2026-07-13 14:49:23 Client          TRACE Binding Handlers to Gameclient HttpServer.
+2026-07-13 14:49:23 Client          TRACE Starting Gameclient HttpServer.
+2026-07-13 14:52:06 NetworkUtil     TRACE Stream deserialized successfully: result = ServerGameState[gameId=123, player=1, board=[[B@6e074ee4]
+2026-07-13 14:52:06 GameHandler     TRACE Received game state from server: playerToMove = BLACK, board = [[-1, 1, -1, 1, -1], [1, -1, -1, -1, 1], [-1, -1, -1, -1, -1], [0, -1, -1, -1, 0], [-1, 0, -1, 0, -1]]
+2026-07-13 14:52:06 GameHandler     TRACE Deserializing board.
+2026-07-13 14:52:06 GameHandler     TRACE Updated board.
+2026-07-13 14:52:15 NetworkUtil     TRACE Object serialized successfully: result = {"player":1,"start_move":[0,1],"target_move":[3,1],"arrow_target":[3,3]}
+2026-07-13 14:52:15 NetworkUtil     TRACE Sending response: targetURI = /game/staticai; statusCode = 200; responseBody = {"player":1,"start_move":[0,1],"target_move":[3,1],"arrow_target":[3,3]}
+2026-07-13 14:52:15 NetworkUtil     TRACE Sent response.
+2026-07-13 14:52:23 NetworkUtil     TRACE Stream deserialized successfully: result = ServerGameState[gameId=123, player=1, board=[[B@398830e8]
+2026-07-13 14:52:23 GameHandler     TRACE Received game state from server: playerToMove = BLACK, board = [[-1, 1, -1, 1, -1], [1, -1, -1, -1, 1], [-1, -1, -1, -1, -1], [0, -1, -1, -1, 0], [-1, 0, -1, 0, -1]]
+2026-07-13 14:52:23 GameHandler     TRACE Deserializing board.
+2026-07-13 14:52:23 GameHandler     TRACE Updated board.
+2026-07-13 14:52:32 NetworkUtil     TRACE Object serialized successfully: result = {"player":1,"start_move":[0,1],"target_move":[3,1],"arrow_target":[3,3]}
+2026-07-13 14:52:32 NetworkUtil     TRACE Sending response: targetURI = /game/staticai; statusCode = 200; responseBody = {"player":1,"start_move":[0,1],"target_move":[3,1],"arrow_target":[3,3]}
+2026-07-13 14:52:32 NetworkUtil     TRACE Sent response.
+2026-07-13 14:52:40 NetworkUtil     TRACE Stream deserialized successfully: result = ServerGameState[gameId=123, player=0, board=[[B@76530fd6]
+2026-07-13 14:52:40 GameHandler     TRACE Received game state from server: playerToMove = WHITE, board = [[-1, 1, -1, 1, -1], [1, -1, -1, -1, 1], [-1, -1, -1, -1, -1], [0, -1, -1, -1, 0], [-1, 0, -1, 0, -1]]
+2026-07-13 14:52:40 GameHandler     TRACE Deserializing board.
+2026-07-13 14:52:40 GameHandler     TRACE Updated board.
+2026-07-13 14:52:49 NetworkUtil     TRACE Object serialized successfully: result = {"player":0,"start_move":[3,0],"target_move":[1,2],"arrow_target":[1,1]}
+2026-07-13 14:52:49 NetworkUtil     TRACE Sending response: targetURI = /game/staticai; statusCode = 200; responseBody = {"player":0,"start_move":[3,0],"target_move":[1,2],"arrow_target":[1,1]}
+2026-07-13 14:52:49 NetworkUtil     TRACE Sent response.

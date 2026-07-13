@@ -1,0 +1,26 @@
+-------------------------------------------------------------------------------
+Test set: client.game.PositionTest
+-------------------------------------------------------------------------------
+Tests run: 4, Failures: 2, Errors: 0, Skipped: 0, Time elapsed: 0.044 s <<< FAILURE! -- in client.game.PositionTest
+client.game.PositionTest.testInvalidPositionNegativeX -- Time elapsed: 0.007 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: Negative X-Koordinaten müssen abgelehnt werden. ==> Expected java.lang.IllegalArgumentException to be thrown, but nothing was thrown.
+	at org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:152)
+	at org.junit.jupiter.api.AssertThrows.assertThrows(AssertThrows.java:73)
+	at org.junit.jupiter.api.AssertThrows.assertThrows(AssertThrows.java:39)
+	at org.junit.jupiter.api.Assertions.assertThrows(Assertions.java:3153)
+	at client.game.PositionTest.testInvalidPositionNegativeX(PositionTest.java:19)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+client.game.PositionTest.testInvalidPositionNegativeY -- Time elapsed: 0.008 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: Negative Y-Koordinaten müssen abgelehnt werden. ==> Expected java.lang.IllegalArgumentException to be thrown, but nothing was thrown.
+	at org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:152)
+	at org.junit.jupiter.api.AssertThrows.assertThrows(AssertThrows.java:73)
+	at org.junit.jupiter.api.AssertThrows.assertThrows(AssertThrows.java:39)
+	at org.junit.jupiter.api.Assertions.assertThrows(Assertions.java:3153)
+	at client.game.PositionTest.testInvalidPositionNegativeY(PositionTest.java:27)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
