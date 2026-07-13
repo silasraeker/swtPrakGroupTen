@@ -267,6 +267,7 @@ public final class NetworkUtil {
             return res;
         }
         catch (StreamReadException sre) {
+            logger.warn("sre, resClass= {}, sre= {}", resClass.getName(), sre.getStackTrace());
             // received broken json
             throw new InvalidDataException(
                 resClass,
@@ -275,6 +276,7 @@ public final class NetworkUtil {
             );
         }
         catch (DatabindException dbe) {
+            logger.warn("dbe, resClass= {}, sre= {}", resClass.getName(), dbe.getStackTrace());
             // can not bind the json variables to the class fields
             throw new InvalidDataException(
                 resClass,
