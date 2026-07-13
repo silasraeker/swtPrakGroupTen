@@ -34,7 +34,7 @@ public class Client {
 
         logger.trace("Creating Gameclient HttpServer.");
         HttpServer server = HttpServer.create(
-                new InetSocketAddress("0.0.0.0", 1234), 0
+                new InetSocketAddress("0.0.0.0", 8080), 0
         );
         server.setExecutor(Executors.newVirtualThreadPerTaskExecutor());
 
