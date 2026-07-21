@@ -1,193 +1,292 @@
 package ai.engine;
 
+import ai.evaluators.AlphaBetaEvaluator;
 import ai.factories.AlphaBetaFactory;
+import ai.factories.SimpleFactory;
 import client.game.Content;
 import client.game.Move;
-import client.game.Player;
 import ai.helper.EvaluatorHelper;
 import client.game.Player.Color;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * Represents an engine whose calculation process can be started and stopped. At any point in time,
- * it can provide the best move found so far.
+ * Coordinates parallel evaluator threads to find the best move for a given game position. A
+ * calculation is started with {@code startCalculating}. While the calculation is running,
+ * {@code getBestMove} can return the best move found so far. {@code stopCalculating} interrupts all
+ * active evaluators, waits for them to terminate, and stores the final best move. A new calculation
+ * cannot be started until the previous calculation has been stopped. This class is intended to
+ * manage one active calculation at a time.
  */
 public final class KIClient {
 
-  public enum Difficulty { EASY, MEDIUM, HARD }
+  /**
+   * Difficulty levels for the AI.
+   */
+  public enum Difficulty {
+    EASY, MEDIUM, HARD
+  }
+
+  /**
+   * Logger for error messages.
+   */
+  private static final Logger logger = LoggerFactory.getLogger(KIClient.class);
 
   /**
    * The number of threads that can be used during the calculation process. Must be at least one.
    */
-  private final int numberOfThreads;
+  private final int threadCount;
 
   /**
-   * the color of the player whose turn it is
+   * The color of the player whose turn it is.
    */
-  private Color playerColor;
+  private Color currentPlayerColor;
 
   /**
    * The factory used to create evaluators.
    */
-  private final Factory factory;
+  private final Factory evaluatorFactory;
 
   /**
-   * A List of Evaluators, which are either running or ready to run.
+   * List of evaluators that are either running or ready to run.
    */
-  private List<Evaluator> evaluators = new LinkedList<>();
+  private List<Evaluator> activeEvaluators = new LinkedList<>();
 
   /**
-   * the best move found so far according to the calculations
+   * The best move found so far according to the calculations.
    */
-  private volatile Move best_move;
+  private volatile Move bestMove;
 
-  public KIClient(final Factory factory, final int numberOfThreads) {
+  /**
+   * Creates a new AI client.
+   *
+   * @param evaluatorFactory the factory used to create evaluators
+   * @param threadCount      the number of threads to use
+   * @throws IllegalArgumentException if {@code evaluatorFactory} is {@code null} or
+   *                                  {@code threadCount} is less than 1
+   */
+  public KIClient(final Factory evaluatorFactory, final int threadCount) {
     super();
 
-    if (numberOfThreads < 1) {
-      throw new IllegalArgumentException(
-          "The number of Threads (" + numberOfThreads + ") can't be less than 1!");
-    } else if (factory == null) {
-      throw new IllegalArgumentException("The parameter 'factory' is null");
+    if (threadCount < 1) {
+      throw new IllegalArgumentException("Thread count must be at least 1, but was " + threadCount);
+    } else if (evaluatorFactory == null) {
+      throw new IllegalArgumentException("The parameter 'evaluatorFactory' is null");
     }
-    this.factory = factory;
-    this.numberOfThreads = numberOfThreads;
-  }
-
-  public KIClient(Difficulty difficulty){
-    this(new AlphaBetaFactory(), (int) (Runtime.getRuntime().availableProcessors() * (5.0 / 6.0)));
+    this.evaluatorFactory = evaluatorFactory;
+    this.threadCount = threadCount;
   }
 
   /**
-   * Starts the calculation process.
+   * Creates an AI client with the given difficulty level. The number of threads is set to the
+   * number of available processors minus one.
    *
-   * @param field          the field for which the best move is to be calculated
-   * @param expectedMillis the amount of time the AI client is expected to calculate before being
-   *                       stopped.
-   * @param playerColor    the color of the player whose turn it is
+   * @param difficulty the difficulty level of the AI
+   */
+  public KIClient(Difficulty difficulty) {
+    this(difficulty == Difficulty.EASY ? new SimpleFactory() : new AlphaBetaFactory(),
+        Math.max(1, Runtime.getRuntime().availableProcessors() - 1));
+  }
+
+  /**
+   * Starts an asynchronous search for the best move in the given position. The legal moves are
+   * distributed among multiple evaluator threads. Each evaluator receives its own copy of the game
+   * board. A previous calculation must be stopped with {@code stopCalculating} before this method
+   * is called again.
+   *
+   * @param field              the board position to evaluate
+   * @param expectedMillis     the expected search duration in milliseconds
+   * @param currentPlayerColor the color of the player for which a move is being calculated
+   * @throws IllegalArgumentException if field or currentPlayerColor is null, or if no legal moves
+   *                                  exist
+   * @throws IllegalStateException    if another calculation is still active
    */
   public void startCalculating(final Content[][] field, final long expectedMillis,
-      final Color playerColor) {
+      final Color currentPlayerColor) {
     if (field == null) {
       throw new IllegalArgumentException("The parameter 'field' is null");
-    } else if (playerColor == null) {
-      throw new IllegalArgumentException("The parameter 'playerColor' is null");
+    } else if (currentPlayerColor == null) {
+      throw new IllegalArgumentException("The parameter 'currentPlayerColor' is null");
     }
 
-    // Make sure that all Threads were stopped correctly
-    if (!this.evaluators.isEmpty()) {
-      throw new IllegalStateException("The last Calculation Process hasn't been stopped yet");
+    // A new search may only start after the previous evaluator threads have been stopped.
+    if (!this.activeEvaluators.isEmpty()) {
+      throw new IllegalStateException("The previous calculation has not been stopped yet");
     }
 
-    this.playerColor = playerColor;
-    this.best_move = null;
-    List<Move> moves = EvaluatorHelper.getAllPossibleMoves(field, playerColor);
-    Iterator<Move> iter = moves.iterator();
+    this.currentPlayerColor = currentPlayerColor;
+    this.bestMove = null;
+    List<Move> moves = EvaluatorHelper.getAllPossibleMoves(field, currentPlayerColor);
+    Iterator<Move> moveIterator = moves.iterator();
 
-    // Make sure that there are moves to evaluate
+    // A search cannot be started when the current player has no legal moves.
     if (moves.isEmpty()) {
       throw new IllegalArgumentException("No legal moves available for evaluation");
     }
 
-    // Distributes all possibles moves to different Threads
-    int numberOfEvaluators = this.numberOfThreads;
-    double moves_per_threads = moves.size() / (double) numberOfEvaluators;
-    if (moves_per_threads < 1) {
-      moves_per_threads = 1;
+    // Creating more evaluators than legal moves would leave some evaluators without work.
+    int numberOfEvaluators = this.threadCount;
+    double movesPerEvaluator = moves.size() / (double) numberOfEvaluators;
+    if (movesPerEvaluator < 1) {
+      movesPerEvaluator = 1;
       numberOfEvaluators = moves.size();
     }
-    int moveCounter = 0;
+    // Create activeEvaluators, distribute moves among them, and start them.
     for (int i = 0; i < numberOfEvaluators; i++) {
-      List<Move> evaluator_moves = new LinkedList<>();
+      List<Move> evaluatorMoves = new ArrayList<>((int) (Math.ceil(movesPerEvaluator)));
 
-      for (int j = (int) moves_per_threads * i; j < (int) moves_per_threads * (i + 1); j++) {
-        evaluator_moves.add(iter.next());
+      for (int j = (int) movesPerEvaluator * i; j < (int) movesPerEvaluator * (i + 1); j++) {
+        evaluatorMoves.add(moveIterator.next());
       }
 
-      //Adds the remaining moves to the last Thread
+      // Assign moves left over from integer rounding to the final evaluator.
       if (i == numberOfEvaluators - 1) {
-        while (iter.hasNext()) {
-          evaluator_moves.add(iter.next());
+        while (moveIterator.hasNext()) {
+          evaluatorMoves.add(moveIterator.next());
         }
       }
 
-      moveCounter += evaluator_moves.size();
-      Evaluator evaluator = this.factory.createInstance(playerColor, EvaluatorHelper.copyField(field),
-          evaluator_moves);
-      this.evaluators.add(evaluator);
+      Evaluator evaluator = this.evaluatorFactory.createInstance(currentPlayerColor,
+          EvaluatorHelper.copyField(field), evaluatorMoves);
+      this.activeEvaluators.add(evaluator);
       evaluator.start();
-    }
-
-    if (moveCounter != moves.size()) {
-      throw new IllegalStateException("Not all moves have been distributed");
-    }
-    if (evaluators.isEmpty()) {
-      throw new IllegalStateException("No Evaluators were created");
     }
   }
 
   /**
-   * Stops the calculation process and all running threads.
+   * Stops the active calculation and stores the final best move. All evaluator threads are
+   * interrupted and the method waits until they have terminated. The final result is selected from
+   * the best results reported by the evaluators.
+   *
+   * @throws IllegalStateException if no calculation is currently active
    */
   public void stopCalculating() {
-    // Copies the running Threads into a local copy in order to make room for the start of a new calculation process
-    List<Evaluator> to_be_stopped = this.evaluators;
-    this.evaluators = new LinkedList<>();
+    if (this.activeEvaluators.isEmpty()) {
+      throw new IllegalStateException(
+          "There is no calculation process running that could be stopped");
+    }
 
-    // Signals all Threads to stop
-    for (Evaluator evaluator : to_be_stopped) {
+    // Move the active evaluator list into a local variable so that a new search can be started after
+    // all previous evaluators have terminated.
+    List<Evaluator> evaluatorsToStop = this.activeEvaluators;
+    this.activeEvaluators = new LinkedList<>();
+
+    // Signals all threads to stop.
+    for (Evaluator evaluator : evaluatorsToStop) {
       evaluator.interrupt();
     }
 
-    // Waits for the remaining active Threads and empties the List. Makes sure all Threads are ending correctly
-    while (!to_be_stopped.isEmpty()) {
-      Evaluator first = to_be_stopped.getFirst();
-      while (first.isAlive()) {
+    // Calculate the best move while stopping the calculation process to obtain the final results.
+    int bestEvaluation =
+        this.currentPlayerColor == Color.WHITE ? Integer.MIN_VALUE : Integer.MAX_VALUE;
+    int bestDepth = 0;
+    Move bestMove = evaluatorsToStop.getFirst().getBestMove();
+
+    // Waits for the remaining active threads and clears the list. Ensures that all threads terminate correctly.
+    while (!evaluatorsToStop.isEmpty()) {
+      Evaluator evaluator = evaluatorsToStop.getFirst();
+      while (evaluator.isAlive()) {
         try {
-          first.join(2000);
-          //TODO add Log entry, a thread shouldn't take this long to die
+          evaluator.join(1000);
+          if (evaluator.isAlive()) {
+            logger.error("A thread took more than one seconds to terminate");
+          }
         } catch (InterruptedException e) {
-          throw new IllegalStateException("sollte nd passieren");
+          logger.trace("Main thread was interrupted", e);
+          throw new IllegalStateException("Main thread was interrupted");
         }
       }
-      to_be_stopped.removeFirst();
+      evaluatorsToStop.removeFirst();
+
+      // Gets the best evaluation from the stopped evaluator and checks whether it is the best so far.
+      int evaluation = evaluator.getBestEvaluation();
+      boolean isBetterResult;
+      if (evaluator instanceof AlphaBetaEvaluator alphaBetaEvaluator) {
+        isBetterResult = isBetterResult(evaluation, alphaBetaEvaluator.getSearchDepth(),
+            bestEvaluation, bestDepth);
+        if (isBetterResult) {
+          bestDepth = alphaBetaEvaluator.getSearchDepth();
+        }
+      } else {
+        isBetterResult = ((this.currentPlayerColor == Color.WHITE && evaluation > bestEvaluation)
+            || (this.currentPlayerColor == Color.BLACK && evaluation < bestEvaluation));
+      }
+      if (isBetterResult) {
+        bestEvaluation = evaluation;
+        bestMove = evaluator.getBestMove();
+      }
     }
+    this.bestMove = bestMove;
   }
 
   /**
-   * Searches all threads for the move with the best evaluation. Due to multithreading, there may be
-   * a slight delay. Under normal circumstances this is negligible, but in case of a multithreading
-   * issue (e.g. a deadlock), this method may take longer than expected.
+   * Returns the best move found by the active evaluators so far. If the calculation has already
+   * been stopped, this method returns the final move selected during stopCalculating.
    *
-   * @return the best move found so far according to the calculations
+   * @return the best move currently available
+   * @throws IllegalStateException if no calculation has been started
    */
   public Move getBestMove() {
-    int best_evaluation = this.playerColor == Color.WHITE ? Integer.MIN_VALUE : Integer.MAX_VALUE;
-    Move best_move = null;
-
-    if (this.evaluators.isEmpty()) {
-      if (this.best_move != null) {
-        return this.best_move;
+    if (this.activeEvaluators.isEmpty()) {
+      if (this.bestMove != null) {
+        return this.bestMove;
       }
-      throw new IllegalStateException("There hasn't been done calculations yet");
+      throw new IllegalStateException("No calculation has been started yet");
     }
 
-    //Iterates through all Threads and searches for the move with the best evaluation
-    for (Evaluator evaluator : this.evaluators) {
+    // The best move and evaluation found so far.
+    int bestEvaluation =
+        this.currentPlayerColor == Color.WHITE ? Integer.MIN_VALUE : Integer.MAX_VALUE;
+    int bestDepth = 0;
+    Move bestMove = this.activeEvaluators.getFirst().getBestMove();
+
+    // Iterates through all Threads and searches for the move with the best evaluation.
+    for (Evaluator evaluator : this.activeEvaluators) {
       int evaluation = evaluator.getBestEvaluation();
 
-      if ((this.playerColor == Color.WHITE && evaluation > best_evaluation) || (
-          this.playerColor == Color.BLACK && evaluation < best_evaluation)) {
-        best_evaluation = evaluation;
-        //There is a small Chance, that between getting the evaluation and the best move, the Thread found a better Move.
-        // In that Case that move now is associated with a (most likely slight) worse evaluation
-        best_move = evaluator.getBestMove();
+      boolean better;
+      if (evaluator instanceof AlphaBetaEvaluator alphaBetaEvaluator) {
+        better = isBetterResult(evaluation, alphaBetaEvaluator.getSearchDepth(), bestEvaluation,
+            bestDepth);
+        if (better) {
+          bestDepth = alphaBetaEvaluator.getSearchDepth();
+        }
+      } else {
+        better = ((this.currentPlayerColor == Color.WHITE && evaluation > bestEvaluation) || (
+            this.currentPlayerColor == Color.BLACK && evaluation < bestEvaluation));
+      }
+      if (better) {
+        bestEvaluation = evaluation;
+        bestMove = evaluator.getBestMove();
       }
     }
 
-    this.best_move = best_move;
-    return best_move;
+    this.bestMove = bestMove;
+    return bestMove;
+  }
+
+  // Only used in case alpha-beta pruning is used as algorithm
+  private boolean isBetterResult(int candidateEval, int candidateDepth, int bestEval,
+      int bestDepth) {
+    final int DECISIVE = Integer.MAX_VALUE / 2;
+    boolean candidateDecisive = Math.abs(candidateEval) >= DECISIVE;
+    boolean bestDecisive = Math.abs(bestEval) >= DECISIVE;
+
+    if (candidateDecisive != bestDecisive) {
+      if (!candidateDecisive) {
+        return false;
+      }
+      return this.currentPlayerColor == Color.WHITE ? candidateEval > bestEval
+          : candidateEval < bestEval;
+    }
+    if (candidateDepth != bestDepth) {
+      return candidateDepth > bestDepth;
+    }
+    return this.currentPlayerColor == Color.WHITE ? candidateEval > bestEval
+        : candidateEval < bestEval;
   }
 }

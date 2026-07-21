@@ -1,71 +1,87 @@
 package ai.engine;
 
+import ai.interfaces.PositionEvaluator;
 import client.game.Move;
 import client.game.Content;
 import client.game.Player.Color;
 import java.util.List;
 
 /**
- * Abstract base class for evaluators. Provides helper methods and handles multithreading.
- * Subclasses evaluate a set of candidate moves from the current position and assign a score to each
- * move. The evaluation follows the convention commonly used in chess engines: positive values
- * indicate an advantage for White, negative values indicate an advantage for Black, and zero
- * represents an equal position. The larger the absolute value, the greater the advantage for the
- * respective side.
+ * Base class for worker threads that evaluate a subset of legal moves. Each evaluator receives a
+ * game board, the color of the player for which moves are evaluated, and a list of candidate moves.
+ * Subclasses implement the evaluation algorithm in {@code run} and update the current best result
+ * through {@code updateEvaluation}. Evaluation scores use a White-centric convention: positive
+ * values favor White, negative values favor Black, and zero represents an equal position. Larger
+ * absolute values represent a greater advantage for the corresponding side. Instances are intended
+ * to be managed by KIClient. The best move and its evaluation can be read while the evaluator is
+ * running.
  */
 public abstract class Evaluator extends Thread {
 
   /**
-   * the color of the player whose turn it is
+   * Evaluates a given position.
+   */
+  protected final PositionEvaluator positionEvaluator;
+
+  /**
+   * The color of the player whose turn it is.
    */
   protected final Color playerColor;
 
   /**
-   * the position for which the moves are evaluated
+   * The position for which the moves are evaluated.
    */
   protected final Content[][] field;
 
   /**
-   * the list of moves to evaluate
+   * The list of moves to evaluate.
    */
   protected final List<Move> moves;
 
   /**
-   * The current leading evaluation
+   * The current leading evaluation.
    */
-  private volatile int best_eval;
+  protected volatile int bestEval;
 
   /**
-   * The current best move
+   * The current best move.
    */
-  private volatile Move best_move;
+  protected volatile Move bestMove;
 
   /**
-   * @param field  the position for which the moves are evaluated
-   * @param playerColor the color of the player whose turn it is
-   * @param moves  the list of moves to evaluate
+   * @param positionEvaluator evaluates a given position
+   * @param field             the position for which the moves are evaluated
+   * @param playerColor       the color of the player whose turn it is
+   * @param moves             the list of moves to evaluate
    */
-  public Evaluator(Content[][] field, Color playerColor, final List<Move> moves) {
+  public Evaluator(PositionEvaluator positionEvaluator, Content[][] field, Color playerColor,
+      final List<Move> moves) {
     super();
 
-    //Test Parameters
+    // Validate constructor arguments before initializing the evaluator.
     if (field == null) {
       throw new IllegalArgumentException("the parameter 'field' is null");
     } else if (playerColor == null) {
       throw new IllegalArgumentException("the parameter 'playerColor' is null");
     } else if (moves == null) {
       throw new IllegalArgumentException("the parameter 'moves' is null");
+    } else if (positionEvaluator == null) {
+      throw new IllegalArgumentException("the parameter 'positionEvaluator' is null");
     }
 
+    this.positionEvaluator = positionEvaluator;
     this.playerColor = playerColor;
     this.field = field;
     this.moves = moves;
-    this.best_eval = playerColor == Color.WHITE ? Integer.MIN_VALUE + 1 : Integer.MAX_VALUE - 1;
-    this.best_move = moves.getFirst();
+    this.bestEval = playerColor == Color.WHITE ? Integer.MIN_VALUE + 1 : Integer.MAX_VALUE - 1;
+    this.bestMove = moves.getFirst();
   }
 
   /**
-   * The Process of evaluating the given moves.
+   * Evaluates the assigned candidate moves. Implementations should regularly check
+   * {@code isInterrupted} and stop promptly when interruption is requested. Whenever a move
+   * receives a new evaluation, implementations should call {@code updateEvaluation} to publish a
+   * potentially improved result.
    */
   @Override
   public abstract void run();
@@ -76,12 +92,12 @@ public abstract class Evaluator extends Thread {
    *
    * @param move       the move whose evaluation has changed
    * @param evaluation the new evaluation of the given move
-   */ //TODO Maybe change from an update-based System to an Get-On-Demand System
-  public final void updateEvaluation(final Move move, final double evaluation) {
-    if (this.best_move == move || (this.playerColor == Color.WHITE && evaluation > this.best_eval)
-        || (this.playerColor == Color.BLACK && evaluation < this.best_eval)) {
-      this.best_eval = (int) evaluation;
-      this.best_move = move;
+   */
+  public final void updateEvaluation(final Move move, final int evaluation) {
+    if (this.bestMove == move || (this.playerColor == Color.WHITE && evaluation > this.bestEval)
+        || (this.playerColor == Color.BLACK && evaluation < this.bestEval)) {
+      this.bestEval = evaluation;
+      this.bestMove = move;
     }
   }
 
@@ -89,15 +105,13 @@ public abstract class Evaluator extends Thread {
    * @return the best move found so far according to the calculations
    */
   public final Move getBestMove() {
-    return this.best_move;
+    return this.bestMove;
   }
 
   /**
    * @return the evaluation of the best move found so far according to the calculations
    */
   public final int getBestEvaluation() {
-    return (int) this.best_eval;
+    return this.bestEval;
   }
-
-
 }

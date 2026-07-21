@@ -9,137 +9,187 @@ import client.game.Player.Color;
 import client.game.Position;
 import java.util.Scanner;
 
+/**
+ * Provides a command-line test environment for playing Amazons against an AI. Each color can be
+ * controlled either by a human player or by the MCTS-based AI. Human players enter their moves
+ * through the console, while AI players receive a configurable thinking time per move.
+ */
 public class Testbench {
 
+  /**
+   * Starts an interactive Amazons game in the console.
+   *
+   * @throws InterruptedException if the current thread is interrupted while waiting for the AI
+   */
   public static void main(String[] args) throws InterruptedException {
-    int size = 10, numberOfThreads = (int) (Runtime.getRuntime().availableProcessors() * (5.0
-        / 6.0));
-    if (numberOfThreads < 1) {
-      numberOfThreads = 1;
+    // Reserve some CPU capacity for the operating system and other processes.
+    int threadCount = Runtime.getRuntime().availableProcessors() - 1;
+    if (threadCount < 1) {
+      threadCount = 1;
     }
-    System.out.println("Anzahl an verwendeten Threads wird " + numberOfThreads
-        + " seien");//Just for debugging purpose
-    KIClient ki = new KIClient(new MCTSFactory(), numberOfThreads);
-    Content[][] field = Simulator.createDefaultGame();
+    System.out.println("Number of threads used: " + threadCount);
+
+    // Create the AI client used for every computer-controlled player.
+    KIClient aiClient = new KIClient(new MCTSFactory(), threadCount);
+
+    // Create the initial Amazons board.
+    Content[][] field = Simulator.createDefault8x8Game();
 
     Scanner scanner = new Scanner(System.in);
 
-    // Determine whether the players are controlled by a human or the AI.
+    // Configure whether White is controlled by a human or by the AI.
     boolean isWhiteHuman;
-    int whiteSeconds = -1;
-    System.out.println("Soll der weiße Spieler menschlich seien (y/n)?");
+    int whiteThinkingSeconds = -1;
+    System.out.println("Should the White player be human-controlled (y/n)?");
     do {
       String input = scanner.nextLine();
+
       if (input.trim().equalsIgnoreCase("y")) {
         isWhiteHuman = true;
         break;
       } else if (input.trim().equalsIgnoreCase("n")) {
         isWhiteHuman = false;
+
+        // Ask for the AI thinking time until a valid integer is entered.
         do {
-          System.out.println("Wie viele Sekunden Bedenkzeit soll der Computer haben?");
+          System.out.println("How many seconds should the computer think per move?");
           input = scanner.nextLine();
+
           try {
-            whiteSeconds = Integer.parseInt(input);
+            whiteThinkingSeconds = Integer.parseInt(input);
             break;
-          } catch (Exception e) {
-            System.out.println("Die Eingabe konnte nicht erkannt werden");
+          } catch (NumberFormatException e) {
+            System.out.println("The input could not be recognized.");
           }
         } while (true);
+
         break;
       } else {
-        System.out.println("Eingabe konnte nicht erkannt werden");
+        System.out.println("The input could not be recognized.");
       }
     } while (true);
 
+    // Configure whether Black is controlled by a human or by the AI.
     boolean isBlackHuman;
-    int blackSeconds = -1;
-    System.out.println("Soll der schwarze Spieler menschlich seien (y/n)?");
+    int blackThinkingSeconds = -1;
+    System.out.println("Should the Black player be human-controlled (y/n)?");
     do {
       String input = scanner.nextLine();
+
       if (input.trim().equalsIgnoreCase("y")) {
         isBlackHuman = true;
         break;
       } else if (input.trim().equalsIgnoreCase("n")) {
         isBlackHuman = false;
-        System.out.println("Wie viele Sekunden Bedenkzeit soll der Computer haben?");
-        input = scanner.nextLine();
-        try {
-          blackSeconds = Integer.parseInt(input);
-          break;
-        } catch (Exception e) {
-          System.out.println("Die Eingabe konnte nicht erkannt werden");
-        }
+
+        // Ask for the AI thinking time until a valid integer is entered.
+        do {
+          System.out.println("How many seconds should the computer think per move?");
+          input = scanner.nextLine();
+
+          try {
+            blackThinkingSeconds = Integer.parseInt(input);
+            break;
+          } catch (NumberFormatException exception) {
+            System.out.println("The input could not be recognized.");
+          }
+        } while (true);
+
         break;
       } else {
-        System.out.println("Eingabe konnte nicht erkannt werden, input");
+        System.out.println("The input could not be recognized.");
       }
     } while (true);
 
-    //Plays the Game
+    // White always starts an Amazons game.
     Color currentPlayerColor = Color.WHITE;
-    Move last = null;
-    while (true) {
-      printGame(field, last);
-      System.out.println(
-          "Bewertung der aktuellen Stellung: " + EvaluatorHelper.evaluatePosition(field));
+    Move lastMove = null;
 
-      if ((currentPlayerColor == Color.WHITE && isWhiteHuman) || (currentPlayerColor == Color.BLACK
-          && isBlackHuman)) {
+    // Continue until the application is manually terminated.
+    while (true) {
+      printGame(field, lastMove);
+      System.out.println("Current position evaluation: " + EvaluatorHelper.evaluatePosition(field));
+
+      boolean isCurrentPlayerHuman =
+          (currentPlayerColor == Color.WHITE && isWhiteHuman) || (currentPlayerColor == Color.BLACK
+              && isBlackHuman);
+
+      if (isCurrentPlayerHuman) {
+        // A move consists of six coordinates: start_y start_x target_y target_x arrow_y arrow_x
         System.out.println(
-            "Gebe deinen Zug ein (Format: start_y start_x to_y to_x arrow_y arrow_x)");
+            "Enter your move (format: start_y start_x target_y target_x arrow_y arrow_x):");
         do {
           try {
-            String[] userinput = scanner.nextLine().split(" ");
+            String[] inputParts = scanner.nextLine().split(" ");
             Move move = new Move(
-                new Position(Integer.parseInt(userinput[0]), Integer.parseInt(userinput[1])),
-                new Position(Integer.parseInt(userinput[2]), Integer.parseInt(userinput[3])),
-                new Position(Integer.parseInt(userinput[4]), Integer.parseInt(userinput[5])));
+                new Position(Integer.parseInt(inputParts[0]), Integer.parseInt(inputParts[1])),
+                new Position(Integer.parseInt(inputParts[2]), Integer.parseInt(inputParts[3])),
+                new Position(Integer.parseInt(inputParts[4]), Integer.parseInt(inputParts[5])));
 
+            // Apply the entered move. Invalid moves are rejected by makeMove if applicable.
             EvaluatorHelper.makeMove(field, move);
-            last = move;
-          } catch (Exception e) {
-            System.out.println(e);
-            continue;
+            lastMove = move;
+            break;
+          } catch (Exception exception) {
+            System.out.println("Invalid move: " + exception.getMessage());
           }
-          break;
         } while (true);
       } else {
-        ki.startCalculating(field, 0 , currentPlayerColor);
-        System.out.println("Starts Calculating");
-        long startedMillis = System.currentTimeMillis(); // For debugging purposes, verify that the time limit is respected.
+        long thinkingMillis =
+            (currentPlayerColor == Color.WHITE ? whiteThinkingSeconds : blackThinkingSeconds)
+                * 1000L;
 
-        Thread.sleep((currentPlayerColor == Color.WHITE ? whiteSeconds : blackSeconds) * 1000L);
-        Move best = ki.getBestMove();
+        // Start asynchronous move calculation for the computer-controlled player.
+        aiClient.startCalculating(field, thinkingMillis, currentPlayerColor);
+        System.out.println("Started calculating.");
 
-        int took = (int) ((System.currentTimeMillis() - startedMillis) / 1000);
-        System.out.println("Stops Calculating, took " + took + " Seconds");
-        ki.stopCalculating();
+        long calculationStartMillis = System.currentTimeMillis();
 
+        // Give the AI the configured amount of time to search for a move.
+        Thread.sleep(thinkingMillis);
+
+        Move best = aiClient.getBestMove();
+        aiClient.stopCalculating();
+
+        int calculationSeconds = (int) ((System.currentTimeMillis() - calculationStartMillis)
+            / 1000);
+        System.out.println("Stopped calculating after " + calculationSeconds + " seconds.");
+
+        // Apply the best move found by the AI.
         EvaluatorHelper.makeMove(field, best);
-        last = best;
+        lastMove = best;
       }
+      // Alternate turns between White and Black.
       currentPlayerColor = currentPlayerColor == Color.WHITE ? Color.BLACK : Color.WHITE;
     }
   }
 
 
   /**
-   * Prints a position.
-   * @param field to be printed
-   * @param last_move to be highlighted
+   * Prints the current board state to the console using ANSI colors. The most recent move is
+   * highlighted as follows: Red: the Amazon's starting position; Green: the Amazon's target
+   * position and the arrow position
+   *
+   * @param field    the game board to print
+   * @param lastMove the most recent move, or null if no move has been played yet
    */
-  public static void printGame(Content[][] field, Move last_move) {
+  public static void printGame(Content[][] field, Move lastMove) {
+    // Print column coordinates.
     System.out.print("   ");
-    for (int x = 0; x < field.length; x++) {
-      System.out.print(x + "  ");
+    for (int column = 0; column < field.length; column++) {
+      System.out.print(column + "  ");
     }
     System.out.println();
-    for (int y = 0; y < field.length; y++) {
-      System.out.print(y + "  ");
-      for (int x = 0; x < field[y].length; x++) {
-        String print;
+
+    // Print each row together with its row coordinate.
+    for (int row = 0; row < field.length; row++) {
+      System.out.print(row + "  ");
+
+      for (int column = 0; column < field[row].length; column++) {
         String color = "";
-        print = switch (field[y][x]) {
+
+        // Convert the board content into a printable symbol.
+        String symbol = switch (field[row][column]) {
           case Content.WHITE_AMAZONE -> {
             color = "\u001B[36m";
             yield "W";
@@ -148,30 +198,32 @@ public class Testbench {
             color = "\u001B[36m";
             yield "B";
           }
-          case Content.ARROW -> {
-            //color = "\u001B[37m";
-            yield "×";
-          }
+          case Content.ARROW -> "×";
           default -> {
             color = "\u001B[37m";
             yield "_";
           }
         };
 
-        if (last_move != null) {
-          if (x == last_move.arrow().y() && y == last_move.arrow().x()) {
+        // Highlight the start, target, and arrow positions of the latest move.
+        if (lastMove != null) {
+          if (column == lastMove.arrow().y() && row == lastMove.arrow().x()) {
             color = "\u001B[32m";
           }
-          if (x == last_move.start().y() && y == last_move.start().x()) {
+
+          if (column == lastMove.start().y() && row == lastMove.start().x()) {
             color = "\u001B[31m";
           }
-          if (x == last_move.to().y() && y == last_move.to().x()) {
+
+          if (column == lastMove.to().y() && row == lastMove.to().x()) {
             color = "\u001B[32m";
           }
         }
 
-        System.out.print(color + print + "\u001B[0m" + "  ");
+        // Reset ANSI formatting after every board cell.
+        System.out.print(color + symbol + "\u001B[0m" + "  ");
       }
+
       System.out.println();
     }
   }
