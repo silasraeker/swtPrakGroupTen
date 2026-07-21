@@ -28,7 +28,7 @@ public class GameHandler extends Handler {
     private KIClient ai = new KIClient(Difficulty.HARD);
 
     private volatile int calculationTimeMs = 5000;
-    private volatile int calculationTimeBufferMs = 1000;
+    private volatile int calculationTimeBufferMs = 2000;
 
     /**
      * Routes the incoming HTTP request based on method and URI path to the matching
@@ -131,7 +131,7 @@ public class GameHandler extends Handler {
             }}}
             logger.trace("Updated board.");
 
-            ai.startCalculating(board, 5, playerColor);
+            ai.startCalculating(board, calculationTimeMs - calculationTimeBufferMs, playerColor);
             Thread.sleep(calculationTimeMs - calculationTimeBufferMs);
             Move move = ai.getBestMove();
             String playerMoveJson = NetworkUtil.serializeObject(
