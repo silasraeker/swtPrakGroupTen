@@ -28,7 +28,7 @@ public class GameHandler extends Handler {
     private KIClient ai = new KIClient(Difficulty.HARD);
 
     private volatile int calculationTimeMs = 5000;
-    private volatile int calculationTimeBufferMs = 2000;
+    private volatile int calculationTimeBufferMs = 1500;
 
     /**
      * Routes the incoming HTTP request based on method and URI path to the matching
