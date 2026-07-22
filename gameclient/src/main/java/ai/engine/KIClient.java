@@ -1,8 +1,8 @@
 package ai.engine;
 
 import ai.evaluators.AlphaBetaEvaluator;
+import ai.factories.AlphaBetaFactory;
 import ai.factories.MCTSFactory;
-import ai.factories.MixedFactory;
 import ai.factories.SimpleFactory;
 import client.game.Content;
 import client.game.Move;
@@ -90,8 +90,7 @@ public final class KIClient {
    */
   public KIClient(Difficulty difficulty) {
     this(difficulty == Difficulty.EASY ? new SimpleFactory()
-            : (difficulty == Difficulty.MEDIUM ? new MCTSFactory()
-                : new MixedFactory(EvaluatorHelper::voronoi, emptyFieldCount -> 3, 15)),
+            : (difficulty == Difficulty.MEDIUM ? new MCTSFactory() : new AlphaBetaFactory()),
         Math.max(1, Runtime.getRuntime().availableProcessors() - 1));
   }
 
